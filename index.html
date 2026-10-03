@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق العداد الذكي</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    },
+                    fontFamily: {
+                        tajawal: ['Tajawal', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Number Bounce & Pop Animation */
+        .number-pop {
+            animation: popScale 0.25s ease-out;
+        }
+
+        @keyframes popScale {
+            0% { transform: scale(0.85); opacity: 0.7; }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Ripple Effect */
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ripple-effect {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: ripple 0.5s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Custom Scrollbar for history */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col justify-between transition-colors duration-300">
+
+    <!-- Header Navbar -->
+    <header class="w-full max-w-4xl mx-auto px-4 py-6 flex items-center justify-between">
+        <div class="flex items-center space-x-3 space-x-reverse">
+            <div class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <i class="fa-solid fa-calculator text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide">العداد الذكي</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">تطبيق عدّاد أنيق وتفاعلي</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- Sound Toggle Button -->
+            <button id="soundToggleBtn" onclick="toggleSound()" title="تبديل الصوت" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+            </button>
+
+            <!-- Theme Toggle Button -->
+            <button id="themeToggleBtn" onclick="toggleTheme()" title="تبديل المظهر" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                <i id="themeIcon" class="fa-solid fa-moon"></i>
+            </button>
+
+            <!-- Keyboard Info Button -->
+            <button onclick="toggleKeyHelpModal()" title="اختصارات لوحة المفاتيح" class="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                <i class="fa-solid fa-keyboard"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-4xl mx-auto px-4 flex-1 flex flex-col items-center justify-center py-6 gap-6">
+
+        <!-- Central Card Wrapper -->
+        <div class="w-full max-w-lg bg-white dark:bg-slate-800/90 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-indigo-500/10 border border-slate-100 dark:border-slate-700/60 backdrop-blur-sm flex flex-col items-center transition-all duration-300">
+
+            <!-- Target Goal Progress Bar -->
+            <div class="w-full mb-6">
+                <div class="flex justify-between items-center text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-bullseye text-indigo-500"></i>
+                        <span>الهدف: <span id="goalDisplay">100</span></span>
+                    </span>
+                    <span id="goalPercent">0%</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden p-0.5 border border-slate-200/50 dark:border-slate-600/50">
+                    <div id="progressBar" class="h-full bg-gradient-to-l from-indigo-500 to-purple-500 rounded-full transition-all duration-300 w-0"></div>
+                </div>
+            </div>
+
+            <!-- Number Display Container -->
+            <div class="relative w-full py-8 my-2 bg-slate-50 dark:bg-slate-900/70 rounded-2xl border border-slate-200/70 dark:border-slate-700/50 flex flex-col items-center justify-center overflow-hidden shadow-inner">
+                
+                <!-- Counter Value -->
+                <div id="counterValue" class="text-7xl sm:text-8xl font-black text-slate-800 dark:text-slate-100 tracking-tight font-mono transition-transform duration-100">
+                    0
+                </div>
+
+                <!-- Status indicator badge -->
+                <div id="statusBadge" class="mt-3 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 transition">
+                    البداية من 0
+                </div>
+            </div>
+
+            <!-- Main Action Controls (+ / -) -->
+            <div class="grid grid-cols-2 gap-4 w-full mt-6">
+                <!-- Decrement (-) Button -->
+                <button onclick="decrementCounter()" class="btn-ripple group relative flex items-center justify-center gap-2 py-4 px-6 rounded-2xl bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-bold text-2xl shadow-lg shadow-rose-500/25 transition-all duration-200">
+                    <i class="fa-solid fa-minus text-xl group-hover:-translate-x-0.5 transition-transform"></i>
+                    <span>إنقاص</span>
+                </button>
+
+                <!-- Increment (+) Button -->
+                <button onclick="incrementCounter()" class="btn-ripple group relative flex items-center justify-center gap-2 py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-2xl shadow-lg shadow-emerald-500/25 transition-all duration-200">
+                    <i class="fa-solid fa-plus text-xl group-hover:scale-125 transition-transform"></i>
+                    <span>زيادة</span>
+                </button>
+            </div>
+
+            <!-- Step Size & Presets Row -->
+            <div class="w-full mt-6 pt-6 border-t border-slate-100 dark:border-slate-700/60 flex flex-col gap-3">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    <span>قيمة الخطوة (مقدار الزيادة/النقصان):</span>
+                    <span id="currentStepText" class="text-indigo-600 dark:text-indigo-400 font-bold">1</span>
+                </div>
+
+                <!-- Quick Step Selector Pills -->
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setStep(1)" class="step-btn active py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white transition">1</button>
+                    <button onclick="setStep(5)" class="step-btn py-2 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-600 transition">5</button>
+                    <button onclick="setStep(10)" class="step-btn py-2 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-600 transition">10</button>
+                    <button onclick="setStep(100)" class="step-btn py-2 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-600 transition">100</button>
+                </div>
+            </div>
+
+            <!-- Secondary Actions: Reset & Goal Setting -->
+            <div class="flex items-center justify-between w-full gap-3 mt-6">
+                <!-- Reset Button -->
+                <button onclick="resetCounter()" class="flex-1 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-700/70 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition active:scale-95">
+                    <i class="fa-solid fa-rotate-right text-xs"></i>
+                    <span>إعادة ضبط</span>
+                </button>
+
+                <!-- Set Goal Button -->
+                <button onclick="openGoalModal()" class="flex-1 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-700/70 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm flex items-center justify-center gap-2 transition active:scale-95">
+                    <i class="fa-solid fa-flag text-xs"></i>
+                    <span>تغيير الهدف</span>
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Statistics & History Grid -->
+        <div class="w-full max-w-lg grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Stat 1: Total Clicks -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-hand-pointer"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">إجمالي الضغطات</div>
+                    <div id="statClicks" class="text-lg font-bold">0</div>
+                </div>
+            </div>
+
+            <!-- Stat 2: Highest Value -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-arrow-up-long"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">أعلى قيمة</div>
+                    <div id="statMax" class="text-lg font-bold">0</div>
+                </div>
+            </div>
+
+            <!-- Stat 3: Lowest Value -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-arrow-down-long"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-500 dark:text-slate-400">أدنى قيمة</div>
+                    <div id="statMin" class="text-lg font-bold">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity History Dropdown / Container -->
+        <div class="w-full max-w-lg bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700/60 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-history"></i>
+                    <span>سجل النشاطات الأخيرة</span>
+                </h3>
+                <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-rose-500 transition">مسح السجل</button>
+            </div>
+            <div id="historyList" class="max-h-28 overflow-y-auto space-y-2 pr-1 text-xs">
+                <div class="text-slate-400 text-center py-3 italic">لا توجد تغييرات سابقة بعد</div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-4 text-xs text-slate-400 dark:text-slate-500">
+        عداد ذكي وتفاعلي &copy; 2026 - تم التطوير بكل إتقان
+    </footer>
+
+    <!-- Goal Setting Modal -->
+    <div id="goalModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-xs mx-4 shadow-2xl border border-slate-100 dark:border-slate-700">
+            <h3 class="text-lg font-bold mb-1">تحديد الهدف الجديد</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">أدخل الرقم الذي ترغب بالوصول إليه كهدف:</p>
+            <input type="number" id="goalInput" min="1" value="100" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="flex gap-2">
+                <button onclick="saveGoal()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition">حفظ</button>
+                <button onclick="closeGoalModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-sm transition">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="keyHelpModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-sm mx-4 shadow-2xl border border-slate-100 dark:border-slate-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-keyboard text-indigo-500"></i>
+                    <span>اختصارات المفاتيح</span>
+                </h3>
+                <button onclick="toggleKeyHelpModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-700">
+                    <span class="text-slate-500 dark:text-slate-400">زيادة +1</span>
+                    <kbd class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs font-mono">سهم للأعلى ↑ / Space</kbd>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-700">
+                    <span class="text-slate-500 dark:text-slate-400">إنقاص -1</span>
+                    <kbd class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs font-mono">سهم للاسفل ↓</kbd>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-slate-500 dark:text-slate-400">إعادة ضبط</span>
+                    <kbd class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs font-mono">حرف R</kbd>
+                </div>
+            </div>
+            <button onclick="toggleKeyHelpModal()" class="w-full mt-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-xs font-bold shadow-xl border border-slate-700/20 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center gap-2">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 dark:text-emerald-600"></i>
+        <span id="toastMessage">تم التحديث</span>
+    </div>
+
+    <script>
+        // State variables
+        let count = 0;
+        let step = 1;
+        let goal = 100;
+        let totalClicks = 0;
+        let maxCount = 0;
+        let minCount = 0;
+        let soundEnabled = true;
+        let history = [];
+
+        // Web Audio API Synthesizer setup for crisp click sound effects
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new AudioContext();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'inc') {
+                    // High pitch pleasant chirp
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'dec') {
+                    // Low pitch soft click
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(220, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'reset') {
+                    // Double tone sweep
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'goal') {
+                    // Fanfare victory chords
+                    const freqs = [523.25, 659.25, 783.99, 1046.50];
+                    freqs.forEach((f, i) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.frequency.setValueAtTime(f, now + (i * 0.06));
+                        g.gain.setValueAtTime(0.12, now + (i * 0.06));
+                        g.gain.exponentialRampToValueAtTime(0.001, now + 0.35 + (i * 0.06));
+                        o.start(now + (i * 0.06));
+                        o.stop(now + 0.35 + (i * 0.06));
+                    });
+                }
+            } catch (e) {
+                // Audio context fallback safeguard
+            }
+        }
+
+        // DOM Elements
+        const counterDisplay = document.getElementById('counterValue');
+        const statusBadge = document.getElementById('statusBadge');
+        const progressBar = document.getElementById('progressBar');
+        const goalPercent = document.getElementById('goalPercent');
+        const goalDisplay = document.getElementById('goalDisplay');
+        const statClicksEl = document.getElementById('statClicks');
+        const statMaxEl = document.getElementById('statMax');
+        const statMinEl = document.getElementById('statMin');
+        const historyList = document.getElementById('historyList');
+
+        // Update Counter Display and stats
+        function updateDisplay(actionType = null) {
+            // Update counter text
+            counterDisplay.textContent = count;
+
+            // Trigger Pop animation
+            counterDisplay.classList.remove('number-pop');
+            void counterDisplay.offsetWidth; // Trigger reflow
+            counterDisplay.classList.add('number-pop');
+
+            // Color status based on sign
+            if (count > 0) {
+                statusBadge.textContent = 'قيمة موجبة';
+                statusBadge.className = 'mt-3 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 transition';
+            } else if (count < 0) {
+                statusBadge.textContent = 'قيمة سالبة';
+                statusBadge.className = 'mt-3 px-3 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 transition';
+            } else {
+                statusBadge.textContent = 'البداية من 0';
+                statusBadge.className = 'mt-3 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 transition';
+            }
+
+            // Progress bar update
+            const percentage = Math.min(Math.max(Math.round((count / goal) * 100), 0), 100);
+            progressBar.style.width = percentage + '%';
+            goalPercent.textContent = percentage + '%';
+
+            // Check goal achievement
+            if (count >= goal && actionType === 'inc' && (count - step) < goal) {
+                playSound('goal');
+                showToast(`🎉 مبروك! لقد وصلت إلى هدفك (${goal})`);
+            }
+
+            // Update stats
+            statClicksEl.textContent = totalClicks;
+            if (count > maxCount) maxCount = count;
+            if (count < minCount) minCount = count;
+            statMaxEl.textContent = maxCount;
+            statMinEl.textContent = minCount;
+
+            // Log history if action occurred
+            if (actionType) {
+                addHistoryRecord(actionType);
+            }
+        }
+
+        // Increment Counter
+        function incrementCounter() {
+            count += step;
+            totalClicks++;
+            playSound('inc');
+            updateDisplay('inc');
+        }
+
+        // Decrement Counter
+        function decrementCounter() {
+            count -= step;
+            totalClicks++;
+            playSound('dec');
+            updateDisplay('dec');
+        }
+
+        // Reset Counter
+        function resetCounter() {
+            if (count === 0 && totalClicks === 0) return;
+            count = 0;
+            playSound('reset');
+            updateDisplay('reset');
+            showToast('تم إعادة ضبط العداد إلى 0');
+        }
+
+        // Step Changer
+        function setStep(newStep) {
+            step = newStep;
+            document.getElementById('currentStepText').textContent = step;
+            
+            // Highlight active pill
+            document.querySelectorAll('.step-btn').forEach(btn => {
+                if (parseInt(btn.textContent) === step) {
+                    btn.className = 'step-btn active py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white transition shadow-md shadow-indigo-500/20';
+                } else {
+                    btn.className = 'step-btn py-2 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-600 transition';
+                }
+            });
+            showToast(`تم تغيير الخطوة إلى ${step}`);
+        }
+
+        // History Recording
+        function addHistoryRecord(type) {
+            const time = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            let text = '';
+            let colorClass = '';
+
+            if (type === 'inc') {
+                text = `زيادة بمقدار +${step} (النتيجة: ${count})`;
+                colorClass = 'text-emerald-600 dark:text-emerald-400';
+            } else if (type === 'dec') {
+                text = `إنقاص بمقدار -${step} (النتيجة: ${count})`;
+                colorClass = 'text-rose-600 dark:text-rose-400';
+            } else if (type === 'reset') {
+                text = `إعادة ضبط العداد إلى 0`;
+                colorClass = 'text-indigo-600 dark:text-indigo-400';
+            }
+
+            history.unshift({ time, text, colorClass });
+            if (history.length > 15) history.pop();
+
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                historyList.innerHTML = '<div class="text-slate-400 text-center py-3 italic">لا توجد تغييرات سابقة بعد</div>';
+                return;
+            }
+
+            historyList.innerHTML = history.map(item => `
+                <div class="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                    <span class="${item.colorClass} font-semibold">${item.text}</span>
+                    <span class="text-slate-400 text-[10px]">${item.time}</span>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            history = [];
+            renderHistory();
+            showToast('تم مسح سجل النشاطات');
+        }
+
+        // Modal Controls
+        function openGoalModal() {
+            const modal = document.getElementById('goalModal');
+            document.getElementById('goalInput').value = goal;
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeGoalModal() {
+            const modal = document.getElementById('goalModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function saveGoal() {
+            const val = parseInt(document.getElementById('goalInput').value);
+            if (!isNaN(val) && val > 0) {
+                goal = val;
+                goalDisplay.textContent = goal;
+                closeGoalModal();
+                updateDisplay();
+                showToast(`تم تغيير الهدف إلى ${goal}`);
+            }
+        }
+
+        function toggleKeyHelpModal() {
+            const modal = document.getElementById('keyHelpModal');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            } else {
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            }
+        }
+
+        // Sound Toggle
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+                showToast('تم تفعيل الصوت');
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+                showToast('تم إيقاف الصوت');
+            }
+        }
+
+        // Dark / Light Theme Toggle
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('themeIcon');
+            if (isDark) {
+                icon.className = 'fa-solid fa-sun text-amber-400';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                icon.className = 'fa-solid fa-moon';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Notification Toast System
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // Keyboard Support
+        window.addEventListener('keydown', (e) => {
+            // Prevent shortcuts when typing in an input
+            if (e.target.tagName === 'INPUT') return;
+
+            if (e.key === 'ArrowUp' || e.key === ' ' || e.key === '+') {
+                e.preventDefault();
+                incrementCounter();
+            } else if (e.key === 'ArrowDown' || e.key === '-') {
+                e.preventDefault();
+                decrementCounter();
+            } else if (e.key === 'r' || e.key === 'R' || e.key === 'ق') {
+                e.preventDefault();
+                resetCounter();
+            }
+        });
+
+        // Initialize theme preference on load
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('themeIcon').className = 'fa-solid fa-sun text-amber-400';
+        }
+
+        // Initial setup
+        updateDisplay();
+    </script>
+</body>
+</html>
